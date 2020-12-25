@@ -29,8 +29,8 @@ ROS package for calibrating the pose of camera
    ```
     - `sub_topic`指明订阅的图像话题。
     - `pub_topic`指明发布的图像话题。
-    - `cam_fx``cam_fy``cam_u0``cam_v0`为相机内参。
-    - `image_width``image_height`为相机图像尺寸。
+    - `cam_fx` `cam_fy` `cam_u0` `cam_v0`为相机内参。
+    - `image_width` `image_height`为相机图像尺寸。
     - `depression_angle`为相机俯仰角，相机光轴低于水平面时为正，相机光轴高于水平面时为负，单位为度。
 
 ## 运行
