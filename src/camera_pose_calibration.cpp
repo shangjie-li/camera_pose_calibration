@@ -167,7 +167,7 @@ void chatter(Calibrator* p)
     if (p->compute_depression_angle_)
     {
         std::cout << "" << std::endl;
-        std::cout << "Put the sign on the position 1 (closer to camera)." << std::endl;
+        std::cout << "Put the sign on the position 1.(closer to camera)" << std::endl;
         std::cout << "Make sure the sign coincides exactly with the red circle in the image." << std::endl;
         std::cout << "Mark the position." << std::endl;
         
@@ -189,12 +189,12 @@ void chatter(Calibrator* p)
         }
         
         std::cout << "" << std::endl;
-        std::cout << "What's the height of the sign?" << std::endl;
+        std::cout << "What's the height of the sign?(meter)" << std::endl;
         double h1;
         std::cin >> h1;
         
         std::cout << "" << std::endl;
-        std::cout << "Put the sign on the position 2 (further from camera)." << std::endl;
+        std::cout << "Put the sign on the position 2.(further from camera)" << std::endl;
         std::cout << "Make sure the sign coincides exactly with the red circle in the image." << std::endl;
         std::cout << "Mark the position." << std::endl;
         
@@ -216,12 +216,12 @@ void chatter(Calibrator* p)
         }
         
         std::cout << "" << std::endl;
-        std::cout << "What's the height of the sign?" << std::endl;
+        std::cout << "What's the height of the sign?(meter)" << std::endl;
         double h2;
         std::cin >> h2;
         
         std::cout << "" << std::endl;
-        std::cout << "What's the distance between the position 1 and the position 2?" << std::endl;
+        std::cout << "What's the distance between the position 1 and the position 2?(meter)" << std::endl;
         double d;
         std::cin >> d;
         
@@ -229,7 +229,7 @@ void chatter(Calibrator* p)
         angle = p->set_parameter(h1, h2, d);
         
         std::cout << "" << std::endl;
-        std::cout << "The depression angle of the camera is " << angle << "." << std::endl;
+        std::cout << "The depression angle of the camera is " << angle << " deg." << std::endl;
         
         p->show_height_point_ = true;
         p->show_center_point_ = false;
@@ -242,7 +242,7 @@ void chatter(Calibrator* p)
     else
     {
         std::cout << "" << std::endl;
-        std::cout << "What's the depression angle of the camera?" << std::endl;
+        std::cout << "What's the depression angle of the camera?(deg)" << std::endl;
         double angle;
         std::cin >> angle;
         p->set_parameter(angle);
