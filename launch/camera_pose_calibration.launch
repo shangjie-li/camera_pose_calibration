@@ -5,16 +5,12 @@
 	<node pkg="camera_pose_calibration" type="camera_pose_calibration_node" name="camera_pose_calibration_node" output="screen" >
 	
 		<param name="sub_topic" value="/usb_cam/image_raw"/>
-		<param name="pub_topic" value="/image_calibrator"/>
-		
 		<param name="cam_fx" value="906.435547"/>
         <param name="cam_fy" value="920.962402"/>
         <param name="cam_u0" value="319"/>
         <param name="cam_v0" value="180"/>
         <param name="image_width" value="640"/>
         <param name="image_height" value="480"/>
-        
-        <param name="depression_angle" value="-0.9"/>
         
 	</node>
 	

@@ -2,7 +2,9 @@
 #include <sensor_msgs/Image.h>
 #include <std_msgs/UInt64.h>
 #include <std_msgs/UInt8.h>
+#include <image_transport/image_transport.h>
 #include <cv_bridge/cv_bridge.h>
+#include <boost/thread.hpp>
 
 #include "opencv2/core.hpp"
 #include "opencv2/highgui/highgui.hpp"
@@ -23,56 +25,63 @@ public:
 	Calibrator(ros::NodeHandle &nh);
 	~Calibrator();
 	
+	double set_parameter(double h1, double h2, double d);
+	void set_parameter(double angle);
+	
+	bool compute_depression_angle_;
+	bool show_center_point_;
+    bool show_height_point_;
+	
 private:
 	void image_cb(const sensor_msgs::Image::ConstPtr &msg);
-	void draw(cv::Mat &img);
 	
-private:
 	std::string sub_topic_;
-	std::string pub_topic_;
-	
 	double cam_fx_;
     double cam_fy_;
     int cam_u0_;
     int cam_v0_;
-        
     int image_width_;
     int image_height_;
-    
-    double depression_angle_;
+	
+	double depression_angle_;
 	
 	ros::Subscriber sub_image_;
-	ros::Publisher pub_image_;
 };
 
 Calibrator::Calibrator(ros::NodeHandle &nh)
 {
     nh.param<std::string>("sub_topic", sub_topic_, "/usb_cam/image_raw");
-    nh.param<std::string>("pub_topic", pub_topic_, "/image_calibrator");
-    
     nh.param<double>("cam_fx", cam_fx_, 581.0);
     nh.param<double>("cam_fy", cam_fy_, 604.0);
     nh.param<int>("cam_u0", cam_u0_, 605.0);
     nh.param<int>("cam_v0", cam_v0_, 332.0);
-    
     nh.param<int>("image_width", image_width_, 1280);
     nh.param<int>("image_height", image_height_, 720);
     
-    nh.param<double>("depression_angle", depression_angle_, 1.25);
-	
 	sub_image_ = nh.subscribe(sub_topic_, 1, &Calibrator::image_cb, this);
-	pub_image_ = nh.advertise<sensor_msgs::Image>(pub_topic_, 1);
-	
-    ros::spin();
 }
 
 Calibrator::~Calibrator()
 {
 }
 
-void Calibrator::draw(cv::Mat &img)
+double Calibrator::set_parameter(double h1, double h2, double d)
 {
-    int r0 = 255;
+    depression_angle_ = atan((h1 - h2) / d);
+    return depression_angle_;
+}
+
+void Calibrator::set_parameter(double angle)
+{
+    depression_angle_ = angle;
+}
+
+void Calibrator::image_cb(const sensor_msgs::Image::ConstPtr &msg)
+{
+	cv_bridge::CvImagePtr cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
+	cv::Mat img = cv_ptr->image;
+	
+	int r0 = 255;
     int g0 = 0;
     int b0 = 0;
     
@@ -84,43 +93,183 @@ void Calibrator::draw(cv::Mat &img)
     int thickness = 1;
     int lineType = 8;
     
-    double theta;
-    int uu, vv;
-    
-    theta = depression_angle_ * PI / 180;
-    uu = cam_u0_;
-    vv = cam_v0_ - cam_fy_ * tan(theta);
-    
-    if (cam_u0_ < 0 || cam_u0_ >= image_width_ || cam_v0_ < 0 || cam_v0_ >= image_height_)
+    if (show_center_point_ || show_center_point_)
     {
-        ROS_ERROR("Cannot draw cv::Point (%d, %d) in the image!", cam_u0_, cam_v0_);
+        cv::namedWindow("calibrator", cv::WINDOW_NORMAL);
     }
-    cv::circle(img, cv::Point(cam_u0_, cam_v0_), radius, cv::Scalar(r0, g0, b0), thickness, lineType);
     
-    if (uu < 0 || uu >= image_width_ || vv < 0 || vv >= image_height_)
+    if (show_center_point_)
     {
-        ROS_ERROR("Cannot draw cv::Point (%d, %d) in the image!", uu, vv);
+        if (cam_u0_ < 0 || cam_u0_ >= image_width_ || cam_v0_ < 0 || cam_v0_ >= image_height_)
+        {
+            ROS_ERROR("Cannot draw cv::Point (%d, %d) in the image!", cam_u0_, cam_v0_);
+        }
+        cv::circle(img, cv::Point(cam_u0_, cam_v0_), radius, cv::Scalar(b0, g0, r0), thickness, lineType);
     }
-    cv::circle(img, cv::Point(uu, vv), radius, cv::Scalar(r, g, b), thickness, lineType);
+    
+    if (show_height_point_)
+    {
+        double theta;
+        int uu, vv;
+        
+        theta = depression_angle_ * PI / 180;
+        uu = cam_u0_;
+        vv = cam_v0_ + cam_fy_ * tan(theta);
+    
+        if (uu < 0 || uu >= image_width_ || vv < 0 || vv >= image_height_)
+        {
+            ROS_ERROR("Cannot draw cv::Point (%d, %d) in the image!", uu, vv);
+        }
+        cv::circle(img, cv::Point(uu, vv), radius, cv::Scalar(b, g, r), thickness, lineType);
+    }
+    
+    cv::imshow("calibrator", img);
+    if (cv::waitKey(1) == 27)
+    {
+        cv::destroyWindow("calibrator");
+        ros::shutdown();
+    };
 }
 
-void Calibrator::image_cb(const sensor_msgs::Image::ConstPtr &msg)
+void chatter(Calibrator* p)
 {
-	cv_bridge::CvImagePtr cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::TYPE_8UC3);
-	cv::Mat img = cv_ptr->image;
-	
-	draw(img);
-	
-	sensor_msgs::ImagePtr msg_out = cv_bridge::CvImage(std_msgs::Header(), "rgb8", img).toImageMsg();
-	pub_image_.publish(msg_out);
+    std::string str;
+    bool str_state;
+    
+    std::cout << "" << std::endl;
+    std::cout << "---Calibrator activated!---" << std::endl;
+    
+    std::cout << "" << std::endl;
+    std::cout << "Do you know the depression angle of the camera?" << std::endl;
+    std::cout << "Enter Y, if you know and then calibrate the height of the camera." << std::endl;
+    std::cout << "Enter N, if you don't know and then calibrate the depression angle first." << std::endl;
+    
+    str_state = false;
+    while (!str_state)
+    {
+        std::cin >> str;
+        if (str == "Y" || str == "y")
+        {
+            p->compute_depression_angle_ = false;
+            str_state = true;
+        }
+        else if (str == "N" || str == "n")
+        {
+            p->compute_depression_angle_ = true;
+            str_state = true;
+        }
+        else
+        {
+            std::cout << "Please enter Y or N to move on." << std::endl;
+        }
+    }
+    
+    if (p->compute_depression_angle_)
+    {
+        std::cout << "" << std::endl;
+        std::cout << "Put the sign on the position 1 (closer to camera)." << std::endl;
+        std::cout << "Make sure the sign coincides exactly with the red circle in the image." << std::endl;
+        std::cout << "Mark the position." << std::endl;
+        
+        std::cout << "" << std::endl;
+        std::cout << "Enter Y when you finish this job." << std::endl;
+    
+        str_state = false;
+        while (!str_state)
+        {
+            std::cin >> str;
+            if (str == "Y" || str == "y")
+            {
+                str_state = true;
+            }
+            else
+            {
+                std::cout << "Enter Y when you finish this job." << std::endl;
+            }
+        }
+        
+        std::cout << "" << std::endl;
+        std::cout << "What's the height of the sign?" << std::endl;
+        double h1;
+        std::cin >> h1;
+        
+        std::cout << "" << std::endl;
+        std::cout << "Put the sign on the position 2 (further from camera)." << std::endl;
+        std::cout << "Make sure the sign coincides exactly with the red circle in the image." << std::endl;
+        std::cout << "Mark the position." << std::endl;
+        
+        std::cout << "" << std::endl;
+        std::cout << "Enter Y when you finish this job." << std::endl;
+    
+        str_state = false;
+        while (!str_state)
+        {
+            std::cin >> str;
+            if (str == "Y" || str == "y")
+            {
+                str_state = true;
+            }
+            else
+            {
+                std::cout << "Enter Y when you finish this job." << std::endl;
+            }
+        }
+        
+        std::cout << "" << std::endl;
+        std::cout << "What's the height of the sign?" << std::endl;
+        double h2;
+        std::cin >> h2;
+        
+        std::cout << "" << std::endl;
+        std::cout << "What's the distance between the position 1 and the position 2?" << std::endl;
+        double d;
+        std::cin >> d;
+        
+        double angle;
+        angle = p->set_parameter(h1, h2, d);
+        
+        std::cout << "" << std::endl;
+        std::cout << "The depression angle of the camera is " << angle << "." << std::endl;
+        
+        p->show_height_point_ = true;
+        p->show_center_point_ = false;
+        
+        std::cout << "" << std::endl;
+        std::cout << "Put the sign to coincide exactly with the green circle in the image." << std::endl;
+        std::cout << "Measure the height of the sign, which is equal to the height of the camera." << std::endl;
+        std::cout << "And then you can press Esc on the image to shut down this procedure." << std::endl;
+    }
+    else
+    {
+        std::cout << "" << std::endl;
+        std::cout << "What's the depression angle of the camera?" << std::endl;
+        double angle;
+        std::cin >> angle;
+        p->set_parameter(angle);
+        
+        p->show_height_point_ = true;
+        p->show_center_point_ = false;
+        
+        std::cout << "" << std::endl;
+        std::cout << "Put the sign to coincide exactly with the green circle in the image." << std::endl;
+        std::cout << "Measure the height of the sign, which is equal to the height of the camera." << std::endl;
+        std::cout << "And then you can press Esc on the image to shut down this procedure." << std::endl;
+    }
 }
 
 int main(int argc, char **argv)
 {
 	ros::init(argc, argv, "calibrator");
     ros::NodeHandle nh("~");
-
-    Calibrator calibrator(nh);
+    
+    Calibrator* cp = new Calibrator(nh);
+    cp->show_center_point_ = true;
+    cp->show_height_point_ = false;
+    
+    boost::thread server(chatter, cp);
+    
+    ros::spin();
+    
     return 0;
 }
 

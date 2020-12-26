@@ -12,6 +12,7 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   std_msgs
   cv_bridge
+  image_transport
 )
  
 find_package(OpenCV REQUIRED)
@@ -42,3 +43,4 @@ include_directories(
 add_executable(${PROJECT_NAME}_node src/camera_pose_calibration.cpp)
 add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(${PROJECT_NAME}_node ${catkin_LIBRARIES})
+target_link_libraries(${PROJECT_NAME}_node ${OpenCV_LIBS})
