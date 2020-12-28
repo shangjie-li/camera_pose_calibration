@@ -68,6 +68,8 @@ Calibrator::~Calibrator()
 double Calibrator::set_parameter(double h1, double h2, double d)
 {
     depression_angle_ = atan((h1 - h2) / d);
+    depression_angle_ = depression_angle_ * 180 / PI;
+    
     return depression_angle_;
 }
 
@@ -114,7 +116,7 @@ void Calibrator::image_cb(const sensor_msgs::Image::ConstPtr &msg)
         
         theta = depression_angle_ * PI / 180;
         uu = cam_u0_;
-        vv = cam_v0_ + cam_fy_ * tan(theta);
+        vv = cam_v0_ - cam_fy_ * tan(theta);
     
         if (uu < 0 || uu >= image_width_ || vv < 0 || vv >= image_height_)
         {
