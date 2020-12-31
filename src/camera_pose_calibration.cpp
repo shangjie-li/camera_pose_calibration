@@ -259,7 +259,7 @@ void chatter(Calibrator* p)
     }
 }
 
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
 	ros::init(argc, argv, "calibrator");
     ros::NodeHandle nh("~");
